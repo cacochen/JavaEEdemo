@@ -37,6 +37,10 @@ $RECYCLE.BIN/
 *.tar.gz
 *.rar
 
+# Folder files
+target/*
+.settings/*
+
 # =========================
 # Operating System Files
 # =========================
