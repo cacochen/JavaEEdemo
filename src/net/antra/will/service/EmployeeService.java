@@ -1,0 +1,76 @@
+package net.antra.will.service;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.*;
+
+import net.antra.will.jdbc.*;
+import net.antra.will.entity.Department;
+import net.antra.will.entity.Employee;
+
+public class EmployeeService {
+	public List<Employee> addNewEmployee(String firstName, String lastName, Integer age, Integer deptid, Object existingList) throws SQLException{
+		Employee newEmp = new Employee();
+		newEmp.setFirstName(firstName);
+		newEmp.setLastName(lastName);
+		newEmp.setAge(age);
+		List<Employee> empList;  // declaration of empList
+		
+		if(existingList == null) {
+			empList = new ArrayList<Employee>();
+			empList.add(newEmp);
+		}else{
+			empList = (ArrayList<Employee>)existingList;
+			empList.add(newEmp);
+		}
+		// adding on DB
+		try(Connection conn = jdbcConnector.getConnection();
+				PreparedStatement stmt = conn.prepareStatement("insert into employee (first_name, last_name, age, dept_id) values (?,?,?,?) ");) {
+			stmt.setString(1, firstName);
+			stmt.setString(2, lastName);
+			stmt.setInt(3, age);
+			stmt.setInt(4, deptid);
+			stmt.executeUpdate();
+			} catch (Exception se) {
+				se.printStackTrace();
+			}
+			
+		return getEmployeeList();
+	}
+	
+	public List<Employee> getEmployeeList() throws SQLException{
+		List<Employee> resList = new ArrayList<Employee>();
+		try(Connection conn = jdbcConnector.getConnection();
+				Statement stmt = conn.createStatement();
+				ResultSet rs = stmt.executeQuery("select * from employee");
+				PreparedStatement stmt2 = conn.prepareStatement("select dept_name, dept_email from department where dept_id = ?");) {
+			while (rs.next()) {
+				int id = rs.getInt("emp_id");
+				String first = rs.getString("first_name");
+				String last = rs.getString("last_name");
+				Integer age = rs.getInt("age");
+				if(rs.wasNull()){
+					age = null;
+				}
+				Integer deptId = rs.getInt("dept_id");
+				//load department
+				stmt2.setInt(1, deptId);
+				ResultSet rsDept = stmt2.executeQuery();
+				Department department = new Department();
+				department.setId(deptId);
+				while(rsDept.next()){
+					department.setName(rsDept.getString("dept_name"));
+					department.setEmail(rsDept.getString("dept_email"));
+				}
+				resList.add(new Employee(id,first,last,age,department));
+			}
+		} catch (Exception se) {
+			se.printStackTrace();
+		}
+		return resList;
+	}
+	
+}
